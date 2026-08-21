@@ -57,6 +57,7 @@ Open **SQL Editor** in the project and run these three files **in order**:
 | 1 | `supabase/01_schema.sql` | Tables, foreign keys, indexes, composite-score function + trigger, signup trigger |
 | 2 | `supabase/02_rls.sql` | RLS enablement, role helper functions, per-role policies, `apply_supplier_metric` RPC |
 | 3 | `supabase/03_seed.sql` | 8 suppliers, 5 CARs, 6 audits, 6 directory users (mock data) |
+| 4 | `supabase/04_hardening.sql` | Pins `search_path` on every function and revokes anonymous `EXECUTE` on the SECURITY DEFINER helpers |
 
 Then create at least one sign-in account. Either sign up through the app's
 **Sign up** tab, or use **Authentication → Users → Add user** in the dashboard and
@@ -194,6 +195,21 @@ layer. Supplier contacts and accreditations are stored as `jsonb` arrays.
 
 The activity feed and notification tray remain client-side session state — they
 are reactions to mutations rather than persisted records.
+
+## Security posture
+
+- Every table has RLS enabled with per-command, per-role policies. The `anon`
+  role has no table grants at all, so the anon key in the bundle is inert until
+  someone signs in.
+- `04_hardening.sql` clears the Supabase database-linter warnings for mutable
+  function `search_path` and anonymous execution of SECURITY DEFINER helpers.
+- Two linter warnings remain and are intentional: `authenticated` retains
+  `EXECUTE` on `current_app_role()` (RLS policies call it as the querying role)
+  and on `apply_supplier_metric` (which performs its own role check and can only
+  touch three scorecard columns).
+- Passwords in this demo are deliberately simple. For anything beyond a demo,
+  turn on **Authentication → Providers → Email → prevent use of leaked
+  passwords** and require email confirmation.
 
 ## Troubleshooting
 
